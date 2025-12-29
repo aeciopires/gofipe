@@ -1,0 +1,33 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "title": "Total Search Requests",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(fipe_http_requests_total{path=\"/api/price\"})", "refId": "A" }
+      ],
+      "options": { "colorMode": "value", "graphMode": "area" }
+    },
+    {
+      "title": "Most Searched Brands",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum by (brand_name) (fipe_search_stats)", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Top 10 Searched Models",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "topk(10, sum by (model_name, brand_name) (fipe_search_stats))", "refId": "A" }
+      ]
+    }
+  ],
+  "schemaVersion": 36,
+  "title": "FIPE Business Overview"
+}

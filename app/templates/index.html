@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go FIPE Search (v2)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* body { background-color: #292a2bff; padding-top: 50px; } 
+        .card { max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .result-box { background-color: #1473d1ff; padding: 20px; border-radius: 5px; display: none; margin-top: 20px;}
+        */
+        /* Custom properties for a modern look */
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            padding-top: 50px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid #334155;
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 12px;
+        }
+
+        .card-header {
+            background-color: var(--primary-color) !important;
+            border-bottom: 1px solid #334155;
+            font-weight: 700;
+        }
+
+        .form-label {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .form-select {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: white;
+        }
+
+        .form-select:focus {
+            background-color: #334155;
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
+        }
+
+        .form-select:disabled {
+            background-color: #1e293b;
+            opacity: 0.5;
+        }
+
+        .result-box {
+            background-color: #334155;
+            padding: 24px;
+            border-radius: 8px;
+            display: none;
+            margin-top: 20px;
+            border-left: 4px solid var(--success-color);
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        #resPrice {
+            color: var(--success-color);
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        #resDesc {
+            color: white;
+        }
+
+        #resRef {
+            color: white;
+        }
+
+        .text-muted {
+            --bs-text-opacity: 1;
+            color: #e9ecef !important;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h3 class="mb-0">FIPE Table (API v2)</h3>
+        </div>
+        <div class="card-body">
+            
+            <div class="mb-3">
+                <label class="form-label">Vehicle Type</label>
+                <select id="typeSelect" class="form-select">
+                    <option value="cars">Cars</option>
+                    <option value="motorcycles">Motorcycles</option>
+                    <option value="trucks">Trucks</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Brand</label>
+                <select id="brandSelect" class="form-select" disabled>
+                    <option value="">Select a Brand</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Model</label>
+                <select id="modelSelect" class="form-select" disabled>
+                    <option value="">Select a Model</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Year</label>
+                <select id="yearSelect" class="form-select" disabled>
+                    <option value="">Select a Year</option>
+                </select>
+            </div>
+
+            <div id="resultBox" class="result-box text-center">
+                <h4 id="resPrice"></h4>
+                <p id="resDesc" class="text-muted"></p>
+                <small id="resRef"></small>
+            </div>
+        </div>
+        <p>(<a href="https://linktr.ee/aeciopires">by aeciopires </a>)</p>
+        <p>(<a href="https://www.fipe.org.br">Data from: www.fipe.org.br</a>)</p>
+    </div>
+</div>
+
+<script>
+    const typeSel = document.getElementById('typeSelect');
+    const brandSel = document.getElementById('brandSelect');
+    const modelSel = document.getElementById('modelSelect');
+    const yearSel = document.getElementById('yearSelect');
+    const resultBox = document.getElementById('resultBox');
+
+    // Load Brands on start
+    loadBrands();
+
+    typeSel.addEventListener('change', () => {
+        resetSelects(brandSel, modelSel, yearSel);
+        loadBrands();
+    });
+
+    brandSel.addEventListener('change', loadModels);
+    modelSel.addEventListener('change', loadYears);
+    yearSel.addEventListener('change', loadPrice);
+
+    function resetSelects(...selects) {
+        selects.forEach(s => {
+            s.innerHTML = '<option value="">Select...</option>';
+            s.disabled = true;
+        });
+        resultBox.style.display = 'none';
+    }
+
+    async function loadBrands() {
+        const type = typeSel.value;
+        const res = await fetch(`/api/brands?type=${type}`);
+        const data = await res.json();
+        
+        // v2 uses 'name' and 'code'
+        populateSelect(brandSel, data);
+    }
+
+    async function loadModels() {
+        resetSelects(modelSel, yearSel);
+        const type = typeSel.value;
+        const brandId = brandSel.value;
+        if(!brandId) return;
+
+        const res = await fetch(`/api/models?type=${type}&brandId=${brandId}`);
+        const data = await res.json();
+        
+        // NOTE: v2 returns a direct array for models, NOT { modelos: [] } like v1
+        // This is a major structural difference.
+        populateSelect(modelSel, data);
+    }
+
+    async function loadYears() {
+        resetSelects(yearSel);
+        const type = typeSel.value;
+        const brandId = brandSel.value;
+        const modelId = modelSel.value;
+        if(!modelId) return;
+
+        const res = await fetch(`/api/years?type=${type}&brandId=${brandId}&modelId=${modelId}`);
+        const data = await res.json();
+        
+        populateSelect(yearSel, data);
+    }
+
+    async function loadPrice() {
+        const type = typeSel.value;
+        const brandId = brandSel.value;
+        const modelId = modelSel.value;
+        const yearId = yearSel.value;
+        
+        const brandName = brandSel.options[brandSel.selectedIndex].text;
+        const modelName = modelSel.options[modelSel.selectedIndex].text;
+
+        if(!yearId) return;
+
+        const res = await fetch(`/api/price?type=${type}&brandId=${brandId}&modelId=${modelId}&yearId=${yearId}&brandName=${encodeURIComponent(brandName)}&modelName=${encodeURIComponent(modelName)}`);
+        const data = await res.json();
+
+        // v2 uses English keys: 'price', 'brand', 'model'
+        document.getElementById('resPrice').innerText = data.price;
+        document.getElementById('resDesc').innerText = `${data.brand} - ${data.model}`;
+        document.getElementById('resRef').innerText = `Ref: ${data.referenceMonth}`;
+        resultBox.style.display = 'block';
+    }
+
+    function populateSelect(element, items) {
+        element.innerHTML = '<option value="">Select...</option>';
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            // v2 uses 'code' and 'name'
+            opt.value = item.code;
+            opt.text = item.name;
+            element.appendChild(opt);
+        });
+        element.disabled = false;
+    }
+</script>
+</body>
+</html>

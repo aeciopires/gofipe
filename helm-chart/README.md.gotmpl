@@ -1,0 +1,52 @@
+{{ template "chart.header" . }}
+{{ template "chart.typeBadge" . }} {{ template "chart.versionBadge" . }}
+
+{{ template "chart.description" . }}
+
+# Prerequisites
+
+- Install the kubectl, helm and helm-docs commands following the instructions of the file [REQUIREMENTS.md](../REQUIREMENTS.md).
+
+# Installing the Chart
+
+- Access a Kubernetes cluster.
+
+- Change the values according to the need of the environment in ``{{ template "chart.name" . }}/values.yaml`` file. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
+
+- Test the installation with command:
+
+```bash
+helm upgrade --install {{ template "chart.name" . }} -f {{ template "chart.name" . }}/values.yaml {{ template "chart.name" . }}/ -n {{ template "chart.name" . }} --create-namespace --dry-run
+```
+
+- To install/upgrade the chart with the release name `{{ template "chart.name" . }}`:
+
+```bash
+helm upgrade --install {{ template "chart.name" . }} -f {{ template "chart.name" . }}/values.yaml {{ template "chart.name" . }}/ -n {{ template "chart.name" . }} --create-namespace
+```
+
+Create a port-forward with the follow command:
+
+```bash
+kubectl port-forward svc/{{ template "chart.name" . }} 8080:80 -n {{ template "chart.name" . }}
+```
+
+Open the browser and access the URL: http://localhost:8080
+
+## Uninstalling the Chart
+
+To uninstall/delete the `{{ template "chart.name" . }}` deployment:
+
+```bash
+helm uninstall {{ template "chart.name" . }} -n {{ template "chart.name" . }}
+```
+
+The command removes all the Kubernetes components associated with the chart and deletes the release.
+
+## Parameters
+
+The following tables lists the configurable parameters of the chart and their default values.
+
+Change the values according to the need of the environment in ``{{ template "chart.name" . }}/values.yaml`` file.
+
+{{ template "chart.valuesTable" . }}

@@ -1,0 +1,4 @@
+Access application with commands:
+
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl port-forward svc/{{ include "gofipe.fullname" . }} 8080:{{ .Values.service.port }} -n {{ include "gofipe.fullname" . }}

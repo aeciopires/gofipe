@@ -1,0 +1,48 @@
+services:
+  gofipe:
+    container_name: gofipe
+    build:
+      context: '.'
+    image: aeciopires/gofipe:1.0.0
+    ports:
+      - "8080:8080"
+    networks:
+      - mynet
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - gofipe
+    restart: always
+    networks:
+      - mynet
+
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: always
+    networks:
+      - mynet
+
+networks:
+  mynet:
+    driver: "bridge"
+
+####
+# To set up monitoring with Prometheus and Grafana, follow these steps:
+# Open Grafana at http://localhost:3000 (User: admin, Pass: admin).
+# Go to Connections -> Data Sources and add Prometheus.
+# Set the URL to http://prometheus:9090.
+# Go to Dashboards -> Import and paste the JSON provided in dashboard/dash-grafana.json.
+# Click "Load" and then "Import" to add the dashboard.
+####

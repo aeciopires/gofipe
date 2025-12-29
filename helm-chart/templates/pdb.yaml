@@ -1,0 +1,16 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "gofipe.fullname" . }}
+spec:
+  {{- if and (not .Values.autoscaling.enabled) (gt (.Values.replicaCount | int) 1) }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- else if and (.Values.autoscaling.enabled) (gt (.Values.autoscaling.minReplicas | int) 1) }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "gofipe.name" . }}
+{{- end }}

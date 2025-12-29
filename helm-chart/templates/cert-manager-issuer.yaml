@@ -1,0 +1,25 @@
+{{- if .Values.ingress.createCertManagerIssuer -}}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-production
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: {{ .Values.ingress.certManagerIssueEmail }}
+    privateKeySecretRef:
+      name: letsencrypt-production
+    solvers:
+    - http01:
+        ingress:
+          name: {{ include "gofipe.fullname" . }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gofipe-cert-empty
+type: kubernetes.io/tls
+stringData:
+  tls.key: ""
+  tls.crt: ""
+{{- end -}}
