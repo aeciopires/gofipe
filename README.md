@@ -42,11 +42,11 @@ To fulfill the requirement of tracking specific metrics (like "most searched mod
 
 ```mermaid
 graph LR
-    User[Browser] -- HTTP GET --> Go[Go Backend (BFF)]
-    Go -- Records Metric --> Prom[Prometheus Registry]
-    Go -- Proxy Request --> FIPE[FIPE API v2]
-    FIPE -- JSON Data --> Go
-    Go -- JSON Data --> User
+    User[Browser] -- "HTTP GET" --> Go["Go Backend (BFF)"]
+    Go -- "Records Metric" --> Prom[Prometheus Registry]
+    Go -- "Proxy Request" --> FIPE["FIPE API v2"]
+    FIPE -- "JSON Data" --> Go
+    Go -- "JSON Data" --> User
 ```
 
 ## Features

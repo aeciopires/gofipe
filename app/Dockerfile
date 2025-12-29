@@ -20,8 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 #----------------------------------    
 
-FROM scratch
-# Image base https://hub.docker.com/_/scratch
+FROM alpine:3.23.2
 
 # About image
 LABEL maintainer="Aécio Pires" \
