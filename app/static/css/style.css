@@ -9,8 +9,11 @@
 
   --accent: #2563eb;
   --accent-2: #7c3aed;
+  --sun-color: #f6c343;
+  --moon-color: #9be3ff;
 }
 
+/* Night theme overrides */
 body{background:var(--bg-night);color:var(--text-night);font-family:Inter,system-ui,Arial;margin:0}
 .card{background:var(--card-night);border-radius:12px;border:0}
 .card-header{background:transparent;border-bottom:0;color:var(--text-night)}
@@ -39,10 +42,25 @@ body{background:var(--bg-night);color:var(--text-night);font-family:Inter,system
 /* Theme switch */
 .theme-switch{display:inline-block;position:relative}
 .theme-switch input{display:none}
-.theme-switch .switch{width:42px;height:24px;background:#cbd5e1;border-radius:999px;display:inline-block;position:relative}
+.theme-switch{display:inline-flex;align-items:center;gap:8px}
+.theme-switch input{display:none}
+.theme-switch .switch{order:1;width:42px;height:24px;background:#cbd5e1;border-radius:999px;display:inline-block;position:relative}
 .theme-switch .switch:after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:all .2s}
 .theme-switch input:checked + .switch{background:var(--accent)}
 .theme-switch input:checked + .switch:after{transform:translateX(18px)}
+
+/* icons */
+.theme-switch .icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:currentColor;opacity:.5;transition:all .2s;order:0}
+.theme-switch .icon-sun{order:2;margin-right:4px}
+.theme-switch .icon-moon{order:0;margin-left:4px}
+
+/* when unchecked (day), emphasize sun */
+.theme-switch input:not(:checked) ~ .icon-sun{opacity:1;color:var(--sun-color)}
+.theme-switch input:not(:checked) ~ .icon-moon{opacity:.3;color:inherit}
+
+/* when checked (night), emphasize moon */
+.theme-switch input:checked ~ .icon-moon{opacity:1;color:var(--moon-color)}
+.theme-switch input:checked ~ .icon-sun{opacity:.3;color:inherit}
 
 /* Day theme overrides */
 body.theme-day{background:var(--bg-day);color:var(--text-day)}

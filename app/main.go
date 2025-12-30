@@ -21,7 +21,8 @@ import (
 // --- Prometheus Metrics ---
 
 var (
-	httpRequestsTotal = prometheus.NewCounterVec(
+	// httpRequestsCounter counts incoming HTTP requests by path and method.
+	httpRequestsCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "fipe_http_requests_total",
 			Help: "Total number of HTTP requests",
@@ -29,15 +30,17 @@ var (
 		[]string{"path", "method"},
 	)
 
-	vehicleSearchStats = prometheus.NewCounterVec(
+	// vehicleSearchCounter counts vehicle searches labeled by brand, model and year.
+	vehicleSearchCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "fipe_search_stats",
 			Help: "Counter for specific vehicle searches by brand, model, and year",
 		},
 		[]string{"brand_name", "model_name", "year_id"},
 	)
-	// New metrics
-	priceMinGauge = prometheus.NewGaugeVec(
+
+	// minPriceGauge stores the minimum observed price per vehicle label.
+	minPriceGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "fipe_price_min",
 			Help: "Minimum observed price for searches",
@@ -45,7 +48,8 @@ var (
 		[]string{"brand_name", "model_name", "year_id"},
 	)
 
-	priceMaxGauge = prometheus.NewGaugeVec(
+	// maxPriceGauge stores the maximum observed price per vehicle label.
+	maxPriceGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "fipe_price_max",
 			Help: "Maximum observed price for searches",
@@ -53,7 +57,8 @@ var (
 		[]string{"brand_name", "model_name", "year_id"},
 	)
 
-	fuelCounter = prometheus.NewCounterVec(
+	// fuelTypeCounter counts searches grouped by fuel type.
+	fuelTypeCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "fipe_fuel_count",
 			Help: "Count of searches by fuel type",
@@ -61,7 +66,8 @@ var (
 		[]string{"fuel"},
 	)
 
-	brandCounter = prometheus.NewCounterVec(
+	// brandSearchCounter counts searches by brand name.
+	brandSearchCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "fipe_brand_search_count",
 			Help: "Count of searches by brand",
@@ -71,60 +77,65 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(httpRequestsTotal)
-	prometheus.MustRegister(vehicleSearchStats)
-	prometheus.MustRegister(priceMinGauge)
-	prometheus.MustRegister(priceMaxGauge)
-	prometheus.MustRegister(fuelCounter)
-	prometheus.MustRegister(brandCounter)
+	prometheus.MustRegister(httpRequestsCounter)
+	prometheus.MustRegister(vehicleSearchCounter)
+	prometheus.MustRegister(minPriceGauge)
+	prometheus.MustRegister(maxPriceGauge)
+	prometheus.MustRegister(fuelTypeCounter)
+	prometheus.MustRegister(brandSearchCounter)
 }
 
 // --- Data Structs (Updated for API v2) ---
 
 // v2 uses "code" and "name" instead of "codigo" and "nome"
+// ReferenceItem represents a single item returned by FIPE v2 lists (brand, model, etc.).
 type ReferenceItem struct {
 	Code string `json:"code"`
 	Name string `json:"name"`
 }
 
 // v2 Price response uses English keys
+// PriceResponse models the JSON structure returned by FIPE v2 for a vehicle price.
 type PriceResponse struct {
-	Price          string `json:"price"`          // was "Valor"
-	Brand          string `json:"brand"`          // was "Marca"
-	Model          string `json:"model"`          // was "Modelo"
-	ModelYear      int    `json:"modelYear"`      // was "AnoModelo"
-	Fuel           string `json:"fuel"`           // was "Combustivel"
-	CodeFipe       string `json:"codeFipe"`       // was "CodigoFipe"
-	ReferenceMonth string `json:"referenceMonth"` // was "MesReferencia"
-	VehicleType    int    `json:"vehicleType"`    // was "TipoVeiculo"
-	AcronymFuel    string `json:"acronymFuel"`    // was "SiglaCombustivel"
+	Price          string `json:"price"` // human-readable price
+	Brand          string `json:"brand"`
+	Model          string `json:"model"`
+	ModelYear      int    `json:"modelYear"`
+	Fuel           string `json:"fuel"`
+	CodeFipe       string `json:"codeFipe"`
+	ReferenceMonth string `json:"referenceMonth"`
+	VehicleType    int    `json:"vehicleType"`
+	AcronymFuel    string `json:"acronymFuel"`
 }
 
 // --- Simple in-memory cache ---
+// cacheItem stores a cached payload and its expiration time.
 type cacheItem struct {
 	data      []byte
 	expiresAt time.Time
 }
 
 var (
-	cacheMu sync.RWMutex
-	cache   = map[string]cacheItem{}
+	cacheMutex sync.RWMutex
+	cacheStore = map[string]cacheItem{}
 )
 
-func getCached(key string) ([]byte, bool) {
-	cacheMu.RLock()
-	defer cacheMu.RUnlock()
-	it, ok := cache[key]
+// getFromCache returns cached data and a boolean indicating presence and freshness.
+func getFromCache(key string) ([]byte, bool) {
+	cacheMutex.RLock()
+	defer cacheMutex.RUnlock()
+	it, ok := cacheStore[key]
 	if !ok || time.Now().After(it.expiresAt) {
 		return nil, false
 	}
 	return it.data, true
 }
 
-func setCached(key string, data []byte, ttl time.Duration) {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	cache[key] = cacheItem{data: data, expiresAt: time.Now().Add(ttl)}
+// setToCache stores bytes at key for ttl duration.
+func setToCache(key string, data []byte, ttl time.Duration) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+	cacheStore[key] = cacheItem{data: data, expiresAt: time.Now().Add(ttl)}
 }
 
 // --- Main Application ---
@@ -136,7 +147,7 @@ func main() {
 
 	// Frontend
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		recordMetrics(r.URL.Path, r.Method)
+		recordHTTPRequest(r.URL.Path, r.Method)
 		tmpl.Execute(w, nil)
 	})
 
@@ -145,7 +156,7 @@ func main() {
 
 	// Health Check
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		recordMetrics(r.URL.Path, r.Method)
+		recordHTTPRequest(r.URL.Path, r.Method)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "ok"}`))
@@ -155,11 +166,11 @@ func main() {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	// API Proxy Routes (BFF)
-	mux.HandleFunc("/api/brands", handleGetBrands)
-	mux.HandleFunc("/api/models", handleGetModels)
-	mux.HandleFunc("/api/years", handleGetYears)
-	mux.HandleFunc("/api/price", handleGetPrice)
-	mux.HandleFunc("/api/priceHistory", handleGetPriceHistory)
+	mux.HandleFunc("/api/brands", handleBrands)
+	mux.HandleFunc("/api/models", handleModels)
+	mux.HandleFunc("/api/years", handleYears)
+	mux.HandleFunc("/api/price", handlePrice)
+	mux.HandleFunc("/api/priceHistory", handlePriceHistory)
 
 	port := ":8080"
 	fmt.Printf("Server starting on port %s...\n", port)
@@ -170,11 +181,13 @@ func main() {
 
 // --- Helper Functions ---
 
-func recordMetrics(path, method string) {
-	httpRequestsTotal.WithLabelValues(path, method).Inc()
+// recordHTTPRequest increments the HTTP requests counter for a path and method.
+func recordHTTPRequest(path, method string) {
+	httpRequestsCounter.WithLabelValues(path, method).Inc()
 }
 
-func fetchExternal(url string) ([]byte, error) {
+// fetchURL performs a GET against the provided URL and returns the response body.
+func fetchURL(url string) ([]byte, error) {
 	// Added a User-Agent just in case v2 enforces it
 	client := http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)
@@ -199,100 +212,102 @@ func fetchExternal(url string) ([]byte, error) {
 // --- API Handlers (Updated for v2 Endpoints) ---
 
 // Base URL for v2
-const BaseURL = "https://fipe.parallelum.com.br/api/v2"
+// FipeBaseURL is the base endpoint for FIPE v2.
+const FipeBaseURL = "https://fipe.parallelum.com.br/api/v2"
 
 // Get Brands: /api/brands?type=cars
-func handleGetBrands(w http.ResponseWriter, r *http.Request) {
-	recordMetrics("/api/brands", r.Method)
-	vType := r.URL.Query().Get("type") // cars, motorcycles, trucks
-	if vType == "" {
-		vType = "cars"
+// handleBrands proxies the brands list from FIPE for the requested type.
+func handleBrands(w http.ResponseWriter, r *http.Request) {
+	recordHTTPRequest("/api/brands", r.Method)
+	vehicleType := r.URL.Query().Get("type") // cars, motorcycles, trucks
+	if vehicleType == "" {
+		vehicleType = "cars"
 	}
 
-	key := "brands:" + vType
-	if d, ok := getCached(key); ok {
+	key := "brands:" + vehicleType
+	if d, ok := getFromCache(key); ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(d)
 		return
 	}
 
 	// v2 Endpoint: /{type}/brands
-	url := fmt.Sprintf("%s/%s/brands", BaseURL, vType)
+	url := fmt.Sprintf("%s/%s/brands", FipeBaseURL, vehicleType)
 
-	data, err := fetchExternal(url)
+	data, err := fetchURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 
 	// cache for 12 hours
-	setCached(key, data, 12*time.Hour)
+	setToCache(key, data, 12*time.Hour)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
 
-// Get Models: /api/models?type=cars&brandId=23
-func handleGetModels(w http.ResponseWriter, r *http.Request) {
-	recordMetrics("/api/models", r.Method)
-	vType := r.URL.Query().Get("type")
+// handleModels proxies the models list from FIPE for a given brand.
+func handleModels(w http.ResponseWriter, r *http.Request) {
+	recordHTTPRequest("/api/models", r.Method)
+	vehicleType := r.URL.Query().Get("type")
 	brandId := r.URL.Query().Get("brandId")
 
-	key := fmt.Sprintf("models:%s:%s", vType, brandId)
-	if d, ok := getCached(key); ok {
+	key := fmt.Sprintf("models:%s:%s", vehicleType, brandId)
+	if d, ok := getFromCache(key); ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(d)
 		return
 	}
 
 	// v2 Endpoint: /{type}/brands/{brandId}/models
-	url := fmt.Sprintf("%s/%s/brands/%s/models", BaseURL, vType, brandId)
+	url := fmt.Sprintf("%s/%s/brands/%s/models", FipeBaseURL, vehicleType, brandId)
 
-	data, err := fetchExternal(url)
+	data, err := fetchURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 
-	setCached(key, data, 12*time.Hour)
+	setToCache(key, data, 12*time.Hour)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
 
-// Get Years: /api/years?type=cars&brandId=23&modelId=5585
-func handleGetYears(w http.ResponseWriter, r *http.Request) {
-	recordMetrics("/api/years", r.Method)
-	vType := r.URL.Query().Get("type")
+// handleYears proxies the available years for a model from FIPE.
+func handleYears(w http.ResponseWriter, r *http.Request) {
+	recordHTTPRequest("/api/years", r.Method)
+	vehicleType := r.URL.Query().Get("type")
 	brandId := r.URL.Query().Get("brandId")
 	modelId := r.URL.Query().Get("modelId")
 
-	key := fmt.Sprintf("years:%s:%s:%s", vType, brandId, modelId)
-	if d, ok := getCached(key); ok {
+	key := fmt.Sprintf("years:%s:%s:%s", vehicleType, brandId, modelId)
+	if d, ok := getFromCache(key); ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(d)
 		return
 	}
 
 	// v2 Endpoint: /{type}/brands/{brandId}/models/{modelId}/years
-	url := fmt.Sprintf("%s/%s/brands/%s/models/%s/years", BaseURL, vType, brandId, modelId)
+	url := fmt.Sprintf("%s/%s/brands/%s/models/%s/years", FipeBaseURL, vehicleType, brandId, modelId)
 
-	data, err := fetchExternal(url)
+	data, err := fetchURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 
-	setCached(key, data, 24*time.Hour)
+	setToCache(key, data, 24*time.Hour)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
 
-// Get Price: /api/price?type=cars&brandId=23&modelId=5585&yearId=2022-3
-func handleGetPrice(w http.ResponseWriter, r *http.Request) {
-	recordMetrics("/api/price", r.Method)
-	vType := r.URL.Query().Get("type")
+// handlePrice returns the current price for a vehicle and updates metrics.
+func handlePrice(w http.ResponseWriter, r *http.Request) {
+	recordHTTPRequest("/api/price", r.Method)
+	vehicleType := r.URL.Query().Get("type")
 	brandId := r.URL.Query().Get("brandId")
 	modelId := r.URL.Query().Get("modelId")
 	yearId := r.URL.Query().Get("yearId")
@@ -300,15 +315,15 @@ func handleGetPrice(w http.ResponseWriter, r *http.Request) {
 	brandName := r.URL.Query().Get("brandName")
 	modelName := r.URL.Query().Get("modelName")
 
-	vehicleSearchStats.WithLabelValues(brandName, modelName, yearId).Inc()
+	vehicleSearchCounter.WithLabelValues(brandName, modelName, yearId).Inc()
 
 	// increment brand count
-	brandCounter.WithLabelValues(brandName).Inc()
+	brandSearchCounter.WithLabelValues(brandName).Inc()
 
 	// v2 Endpoint: /{type}/brands/{brandId}/models/{modelId}/years/{yearId}
-	url := fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s", BaseURL, vType, brandId, modelId, yearId)
+	url := fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s", FipeBaseURL, vehicleType, brandId, modelId, yearId)
 
-	data, err := fetchExternal(url)
+	data, err := fetchURL(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -317,13 +332,13 @@ func handleGetPrice(w http.ResponseWriter, r *http.Request) {
 	// Try to parse price to update min/max metrics and fuel counts
 	var pr PriceResponse
 	if err := json.Unmarshal(data, &pr); err == nil {
-		if f, err := parsePrice(pr.Price); err == nil {
+		if f, err := parseFipePrice(pr.Price); err == nil {
 			// set min and max to current observed value
-			priceMinGauge.WithLabelValues(pr.Brand, pr.Model, yearId).Set(f)
-			priceMaxGauge.WithLabelValues(pr.Brand, pr.Model, yearId).Set(f)
+			minPriceGauge.WithLabelValues(pr.Brand, pr.Model, yearId).Set(f)
+			maxPriceGauge.WithLabelValues(pr.Brand, pr.Model, yearId).Set(f)
 		}
 		if pr.Fuel != "" {
-			fuelCounter.WithLabelValues(pr.Fuel).Inc()
+			fuelTypeCounter.WithLabelValues(pr.Fuel).Inc()
 		}
 	}
 
@@ -331,8 +346,8 @@ func handleGetPrice(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-// fetchExternalConcurrent fetches multiple URLs concurrently and returns results in order.
-func fetchExternalConcurrent(urls []string) ([][]byte, []error) {
+// fetchURLsConcurrent fetches multiple URLs concurrently and returns results in order.
+func fetchURLsConcurrent(urls []string) ([][]byte, []error) {
 	var wg sync.WaitGroup
 	results := make([][]byte, len(urls))
 	errs := make([]error, len(urls))
@@ -341,7 +356,7 @@ func fetchExternalConcurrent(urls []string) ([][]byte, []error) {
 		wg.Add(1)
 		go func(idx int, url string) {
 			defer wg.Done()
-			b, err := fetchExternal(url)
+			b, err := fetchURL(url)
 			results[idx] = b
 			errs[idx] = err
 		}(i, u)
@@ -350,10 +365,10 @@ func fetchExternalConcurrent(urls []string) ([][]byte, []error) {
 	return results, errs
 }
 
-// handleGetPriceHistory attempts to return a price history for the vehicle.
-func handleGetPriceHistory(w http.ResponseWriter, r *http.Request) {
-	recordMetrics("/api/priceHistory", r.Method)
-	vType := r.URL.Query().Get("type")
+// handlePriceHistory attempts to return a price history for the vehicle.
+func handlePriceHistory(w http.ResponseWriter, r *http.Request) {
+	recordHTTPRequest("/api/priceHistory", r.Method)
+	vehicleType := r.URL.Query().Get("type")
 	brandId := r.URL.Query().Get("brandId")
 	modelId := r.URL.Query().Get("modelId")
 	yearId := r.URL.Query().Get("yearId")
@@ -367,8 +382,8 @@ func handleGetPriceHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try a common history path. If it fails, fallback to single-point history.
-	histURL := fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s/history?months=%d", BaseURL, vType, brandId, modelId, yearId, months)
-	data, err := fetchExternal(histURL)
+	histURL := fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s/history?months=%d", FipeBaseURL, vehicleType, brandId, modelId, yearId, months)
+	data, err := fetchURL(histURL)
 	if err == nil {
 		// Normalize the returned history payload so each item has a distinct reference label
 		var raw interface{}
@@ -410,16 +425,16 @@ func handleGetPriceHistory(w http.ResponseWriter, r *http.Request) {
 			// try several candidate endpoints that some FIPE providers use for historic data
 			candidates := []string{
 				// query param variants
-				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s?referenceMonth=%s", BaseURL, vType, brandId, modelId, yearId, ref),
-				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s?reference=%s", BaseURL, vType, brandId, modelId, yearId, ref),
-				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s?month=%s", BaseURL, vType, brandId, modelId, yearId, ref),
+				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s?referenceMonth=%s", FipeBaseURL, vehicleType, brandId, modelId, yearId, ref),
+				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s?reference=%s", FipeBaseURL, vehicleType, brandId, modelId, yearId, ref),
+				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s?month=%s", FipeBaseURL, vehicleType, brandId, modelId, yearId, ref),
 				// path variant
-				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s/history/%s", BaseURL, vType, brandId, modelId, yearId, ref),
-				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s/historico/%s", BaseURL, vType, brandId, modelId, yearId, ref),
+				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s/history/%s", FipeBaseURL, vehicleType, brandId, modelId, yearId, ref),
+				fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s/historico/%s", FipeBaseURL, vehicleType, brandId, modelId, yearId, ref),
 			}
 
 			for _, u := range candidates {
-				b, e := fetchExternal(u)
+				b, e := fetchURL(u)
 				if e == nil {
 					// decode into PriceResponse when possible and set ReferenceMonth explicitly
 					var pr PriceResponse
@@ -479,8 +494,8 @@ func handleGetPriceHistory(w http.ResponseWriter, r *http.Request) {
 
 	if len(history) == 0 {
 		// final fallback: fetch the single current price
-		singleURL := fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s", BaseURL, vType, brandId, modelId, yearId)
-		single, err2 := fetchExternal(singleURL)
+		singleURL := fmt.Sprintf("%s/%s/brands/%s/models/%s/years/%s", FipeBaseURL, vehicleType, brandId, modelId, yearId)
+		single, err2 := fetchURL(singleURL)
 		if err2 != nil {
 			http.Error(w, fmt.Sprintf("history fetch failed: %v, fallback failed: %v", err, err2), http.StatusBadGateway)
 			return
@@ -518,8 +533,8 @@ func handleGetPriceHistory(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-// parsePrice attempts to convert FIPE price strings to float64.
-func parsePrice(s string) (float64, error) {
+// parseFipePrice attempts to convert FIPE price strings to float64.
+func parseFipePrice(s string) (float64, error) {
 	s = strings.TrimSpace(s)
 	re := regexp.MustCompile(`[0-9,.]+`)
 	m := re.FindString(s)
