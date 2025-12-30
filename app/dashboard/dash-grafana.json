@@ -5,27 +5,38 @@
     {
       "title": "Total Search Requests",
       "type": "stat",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "targets": [
-        { "expr": "sum(fipe_http_requests_total{path=\"/api/price\"})", "refId": "A" }
-      ],
-      "options": { "colorMode": "value", "graphMode": "area" }
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [ { "expr": "sum(fipe_http_requests_total)", "refId": "A" } ]
     },
     {
       "title": "Most Searched Brands",
       "type": "piechart",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "targets": [
-        { "expr": "sum by (brand_name) (fipe_search_stats)", "refId": "A" }
-      ]
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "targets": [ { "expr": "sum by (brand_name) (fipe_brand_search_count)", "refId": "A" } ]
+    },
+    {
+      "title": "Fuel Type Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "targets": [ { "expr": "sum by (fuel) (fipe_fuel_count)", "refId": "A" } ]
+    },
+    {
+      "title": "Observed Min Price (latest by brand/model)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "targets": [ { "expr": "max by (brand_name, model_name) (fipe_price_min)", "refId": "A" } ]
+    },
+    {
+      "title": "Observed Max Price (latest by brand/model)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+      "targets": [ { "expr": "max by (brand_name, model_name) (fipe_price_max)", "refId": "A" } ]
     },
     {
       "title": "Top 10 Searched Models",
       "type": "table",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
-      "targets": [
-        { "expr": "topk(10, sum by (model_name, brand_name) (fipe_search_stats))", "refId": "A" }
-      ]
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
+      "targets": [ { "expr": "topk(10, sum by (model_name, brand_name) (fipe_search_stats))", "refId": "A" } ]
     }
   ],
   "schemaVersion": 36,

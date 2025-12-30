@@ -24,8 +24,8 @@ FROM alpine:3.23.2
 
 # About image
 LABEL maintainer="Aécio Pires" \
-      date_create="12/13/2025" \
-      version="1.0.0" \
+      date_create="12/29/2025" \
+      version="2.0.0" \
       description="A web application that provides a user-friendly interface to search the Brazilian FIPE vehicle price table." \
       licensce="GPL-3.0"
 
@@ -34,6 +34,7 @@ WORKDIR /app
 # Copy files to image
 COPY --from=builder /out/gofipe /app/gofipe
 COPY templates/ /app/templates
+COPY static/ /app/static
 
 # Exposing port of application
 EXPOSE 8080

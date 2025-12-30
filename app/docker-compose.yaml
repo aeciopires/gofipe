@@ -3,7 +3,7 @@ services:
     container_name: gofipe
     build:
       context: '.'
-    image: aeciopires/gofipe:1.0.0
+    image: aeciopires/gofipe:2.0.0
     ports:
       - "8080:8080"
     networks:

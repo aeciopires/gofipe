@@ -53,6 +53,12 @@ graph LR
 
 - **FIPE API v2 Integration**: Fully compatible with the latest FIPE API endpoints (English parameters).
 - **BFF Proxy**: Hides external API details from the frontend and handles CORS/Rate-limiting strategies centrally.
+- **Static assets split**: frontend CSS and JS are now served from `/static/` for better structure and caching.
+- **Theme support**: day/night layout with a client-side toggle.
+- **Price history**: new endpoint `/api/priceHistory` and frontend UI to show price history for the last 12 months (configurable months).
+- **Smart cache**: backend caches brands/models/years to reduce external API calls.
+- **Parallel requests**: backend uses concurrent HTTP fetches internally where applicable.
+- **Robust errors**: improved error handling and HTTP status codes for external failures.
 - **Health Check**: dedicated ``/health`` endpoint for Kubernetes/Docker probes.
 - **Prometheus Metrics**:
   - **Standard Go HTTP metrics** (request count, latency).
@@ -71,6 +77,7 @@ The backend exposes the following endpoints:
 |-------|----------|-------------| 
 | ``GET`` | ``/health`` | Returns ``200 OK`` ``{"status": "ok"}`` if the app is running. |
 | ``GET`` | ``/metrics`` | Exposes data in Prometheus format. |
+| ``GET`` | ``/static`` | Exposes static assets. |
 
 **Business API (Proxy)**
 
@@ -82,6 +89,7 @@ These endpoints proxy requests to https://fipe.parallelum.com.br/api/v2.
 | ``GET`` | ``/api/models`` | ``type``, ``brandId`` | Lists models for a brand.|
 | ``GET`` | ``/api/years`` | ``type``, ``brandId``, ``modelId`` | Lists available years for a model.|
 | ``GET`` | ``/api/price`` | ``type``, ``brandId``, ``modelId``, ``yearId`` | (**Critical**) Returns the price and increments the search counter metric. |
+| ``GET`` | ``/api/priceHistory`` | ``type``, ``brandId``, ``modelId``, ``yearId`` | Returns the price history for the last 12 months. |
 
 
 ### Metrics Documentation
@@ -101,6 +109,33 @@ The application exposes the following Prometheus metrics at ``/metrics`` endpoin
     - ``brand_name``: Name of the brand (e.g., "Ford").
     - ``model_name``: Name of the model (e.g., "Fiesta 1.6").
     - ``year_id``: The year code (e.g., "2014-1").
+- **Metric**: ``fipe_price_min``
+  - **Type**: Gauge
+  - **Description**: Minimum observed price recorded for a specific search (brand, model, year). This is updated when price data is successfully parsed from the external FIPE response.
+  - **Labels**:
+    - ``brand_name``
+    - ``model_name``
+    - ``year_id``
+
+- **Metric**: ``fipe_price_max``
+  - **Type**: Gauge
+  - **Description**: Maximum observed price recorded for a specific search (brand, model, year). This is updated when price data is successfully parsed from the external FIPE response.
+  - **Labels**:
+    - ``brand_name``
+    - ``model_name``
+    - ``year_id``
+
+- **Metric**: ``fipe_fuel_count``
+  - **Type**: Counter
+  - **Description**: Counts searches by fuel type as reported by the FIPE response (e.g., "Gasoline", "Alcohol"). Useful to understand distribution of fuel types across searches.
+  - **Labels**:
+    - ``fuel``
+
+- **Metric**: ``fipe_brand_search_count``
+  - **Type**: Counter
+  - **Description**: Counts searches grouped by brand name. Useful to quickly surface the most searched brands.
+  - **Labels**:
+    - ``brand_name``
 
 **Example**:
 
@@ -124,7 +159,7 @@ Install Docker: https://docs.docker.com/get-started/get-docker/
 Run the container
 
 ```bash
-docker run -d -p 8080:8080 --rm --name gofipe aeciopires/gofipe:1.0.0
+docker run -d -p 8080:8080 --rm --name gofipe aeciopires/gofipe:2.0.0
 ```
 
 Access the application:
@@ -137,7 +172,7 @@ Access the application:
 You can change the default port using an environment variable.
 
 ```bash
-docker run -p 3000:3000 -e PORT=3000 --rm --name gofipe aeciopires/gofipe:1.0.0
+docker run -p 3000:3000 -e PORT=3000 --rm --name gofipe aeciopires/gofipe:2.0.0
 ```
 
 Access the application at http://localhost:3000.

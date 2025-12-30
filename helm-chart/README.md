@@ -58,7 +58,7 @@ Change the values according to the need of the environment in ``gofipe/values.ya
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` | Pull policy of Docker image |
 | image.repository | string | `"aeciopires/gofipe"` | Docker image name |
-| image.tag | string | `"1.0.0"` | Docker image tag |
+| image.tag | string | `"2.0.0"` | Docker image tag |
 | imagePullSecrets | list | `[]` | List of dockerconfig secrets names to use when pulling images |
 | ingress.annotations | string | `nil` | Ingress annotations |
 | ingress.certManagerIssueEmail | string | `"CHANGE_HERE"` | Email for Cert Manager Issue |

@@ -1,0 +1,79 @@
+:root{
+  --bg-day: #f8fafc;
+  --card-day: #ffffff;
+  --text-day: #0f172a;
+
+  --bg-night: #0b1220;
+  --card-night: #0f172a;
+  --text-night: #e6eef8;
+
+  --accent: #2563eb;
+  --accent-2: #7c3aed;
+}
+
+body{background:var(--bg-night);color:var(--text-night);font-family:Inter,system-ui,Arial;margin:0}
+.card{background:var(--card-night);border-radius:12px;border:0}
+.card-header{background:transparent;border-bottom:0;color:var(--text-night)}
+.form-label{color:var(--text-night)}
+.form-select{background:white;color:#212529;border:1px solid rgba(255,255,255,0.06)}
+.result-box{background:rgba(255,255,255,0.02);color:white;padding:18px;border-radius:8px;}
+#resPrice {
+  color: var(--success-color);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+#resDesc {
+  color: white;
+}
+
+#resRef {
+  color: white;
+}
+
+.text-muted {
+  --bs-text-opacity: 1;
+  color: #e9ecef !important;
+}
+
+/* Theme switch */
+.theme-switch{display:inline-block;position:relative}
+.theme-switch input{display:none}
+.theme-switch .switch{width:42px;height:24px;background:#cbd5e1;border-radius:999px;display:inline-block;position:relative}
+.theme-switch .switch:after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:all .2s}
+.theme-switch input:checked + .switch{background:var(--accent)}
+.theme-switch input:checked + .switch:after{transform:translateX(18px)}
+
+/* Day theme overrides */
+body.theme-day{background:var(--bg-day);color:var(--text-day)}
+body.theme-day .card{background:var(--card-day)}
+body.theme-day .form-label{color:var(--text-day)}
+body.theme-day .form-select{color:var(--text-day);border:1px solid rgba(15,23,42,0.06)}
+body.theme-day .result-box{background:rgba(92, 90, 90, 0.02);color:black;padding:18px;border-radius:8px}
+body.theme-day #resPrice {
+  color: var(--success-color);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+body.theme-day .card-header{background:transparent;border-bottom:0;color:var(--text-day)}
+
+body.theme-day #resDesc {
+  color: black;
+}
+
+body.theme-day #resRef {
+  color: black;
+}
+
+body.theme-day .text-muted {
+  --bs-text-opacity: 1;
+  color: #070c11ff !important;
+}
+
+/* small responsive tweaks */
+@media(max-width:768px){.card{margin:0 8px}}
+
+/* Modern color accents */
+.btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:0}
+.btn-primary:hover{filter:brightness(.95)}
