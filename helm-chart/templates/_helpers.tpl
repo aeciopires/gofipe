@@ -49,3 +49,28 @@ Selector labels
 app.kubernetes.io/name: {{ include "gofipe.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "gofipe.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "gofipe.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Render a piece of yaml that defines manifests
+Usage:
+{{ include "gofipe.tools.render" ( dict "value" .Values.path.to.value "context" $ ) }}
+*/}}
+{{- define "gofipe.tools.render" -}}
+{{- $value := typeIs "string" .value | ternary .value (.value | toYaml) }}
+{{- if contains "{{" $value }}
+  {{- tpl $value .context }}
+{{- else }}
+  {{- $value }}
+{{- end }}
+{{- end -}}

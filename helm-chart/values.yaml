@@ -10,10 +10,8 @@ updateStrategy:
     maxSurge: 6
     maxUnavailable: 0
 
-# Docker images of example
-# https://hub.docker.com/r/yeasy/simple-web
-# https://hub.docker.com/r/paulbouwer/hello-kubernetes/
-# https://github.com/paulbouwer/hello-kubernetes
+# Docker images of gofipe
+# https://hub.docker.com/r/aeciopires/gofipe
 
 image:
   # -- Docker image name
@@ -21,7 +19,7 @@ image:
   # -- Pull policy of Docker image
   pullPolicy: IfNotPresent
   # -- Docker image tag
-  tag: "2.0.0"
+  tag: "3.0.0"
 
 # -- List of dockerconfig secrets names to use when pulling images
 imagePullSecrets: []
@@ -186,6 +184,8 @@ serviceMonitor:
 # -- Extra arbitrary Kubernetes manifests to deploy within the release
 extraManifests: []
 
-pdb:
+# -- Pod Disruption Budget configuration
+podDisruptionBudget:
   enabled: false
-  maxUnavailable: 25%
+  # -- Minimum available pods
+  minAvailable: 25%

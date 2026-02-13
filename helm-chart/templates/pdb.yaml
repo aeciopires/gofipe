@@ -1,16 +1,17 @@
-{{- if .Values.pdb.enabled }}
+{{- if .Values.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ include "gofipe.fullname" . }}
+  labels:
+    {{- include "gofipe.labels" . | nindent 4 }}
 spec:
   {{- if and (not .Values.autoscaling.enabled) (gt (.Values.replicaCount | int) 1) }}
-  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
   {{- else if and (.Values.autoscaling.enabled) (gt (.Values.autoscaling.minReplicas | int) 1) }}
-  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/name: {{ include "gofipe.name" . }}
+      {{- include "go-fipe.selectorLabels" . | nindent 6 }}
 {{- end }}

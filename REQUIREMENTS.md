@@ -107,9 +107,11 @@ asdf global helm $VERSION
 asdf list helm
 ```
 
+Reference: https://helm.sh/docs/intro/install/
+
 # Helm Docs
 
-Run the following commands to install ``helm-docs``.
+Install helm-docs:
 
 ```bash
 VERSION="1.14.2"

@@ -20,16 +20,19 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 #----------------------------------    
 
-FROM alpine:3.23.2
+FROM alpine:3.23.3
 
 # About image
 LABEL maintainer="Aécio Pires" \
-      date_create="12/29/2025" \
-      version="2.0.0" \
+      date_create="02/13/2026" \
+      version="3.0.0" \
       description="A web application that provides a user-friendly interface to search the Brazilian FIPE vehicle price table." \
       licensce="GPL-3.0"
 
 WORKDIR /app
+
+# Set the default port if not provided during runtime
+ENV PORT=8080
 
 # Copy files to image
 COPY --from=builder /out/gofipe /app/gofipe
@@ -37,7 +40,7 @@ COPY templates/ /app/templates
 COPY static/ /app/static
 
 # Exposing port of application
-EXPOSE 8080
+EXPOSE ${PORT}
 
 CMD ["./gofipe"]
 

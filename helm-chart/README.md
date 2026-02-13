@@ -58,7 +58,7 @@ Change the values according to the need of the environment in ``gofipe/values.ya
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` | Pull policy of Docker image |
 | image.repository | string | `"aeciopires/gofipe"` | Docker image name |
-| image.tag | string | `"2.0.0"` | Docker image tag |
+| image.tag | string | `"3.0.0"` | Docker image tag |
 | imagePullSecrets | list | `[]` | List of dockerconfig secrets names to use when pulling images |
 | ingress.annotations | string | `nil` | Ingress annotations |
 | ingress.certManagerIssueEmail | string | `"CHANGE_HERE"` | Email for Cert Manager Issue |
@@ -77,9 +77,9 @@ Change the values according to the need of the environment in ``gofipe/values.ya
 | livenessProbe.timeoutSeconds | int | `5` | Number of seconds after which the probe times out |
 | nameOverride | string | `""` |  |
 | nodeSelector | object | `{}` | Node selector configurations |
-| pdb.enabled | bool | `false` |  |
-| pdb.maxUnavailable | string | `"25%"` |  |
 | podAnnotations | object | `{}` | Pod annotations configurations |
+| podDisruptionBudget | object | `{"enabled":false,"minAvailable":"25%"}` | Pod Disruption Budget configuration |
+| podDisruptionBudget.minAvailable | string | `"25%"` | Minimum available pods |
 | podSecurityContext | object | `{}` | Pod security configurations |
 | readinessProbe | object | `{"failureThreshold":3,"initialDelaySeconds":5,"path":"/health","periodSeconds":30,"successThreshold":1,"timeoutSeconds":5}` | Health check on creation pod |
 | readinessProbe.failureThreshold | int | `3` | When a probe fails, Kubernetes will try failureThreshold times before giving up. Giving up in case of liveness probe means restarting the container. In case of readiness probe the Pod will be marked Unready |

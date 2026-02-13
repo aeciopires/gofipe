@@ -20,7 +20,7 @@ lint:
 package:
 	CMD="package . -d packages" $(MAKE) helm
 
-# Update documentation of helm chart
+# Generate Helm Chart README
 gen-docs:
 	docker run --rm --name helm-docs  \
 		--user $(shell id -u):$(shell id -g) \
@@ -28,3 +28,27 @@ gen-docs:
 		-w /helm-chart \
 		$(HELM_DOCS_IMAGE) \
 		helm-docs
+
+# Install/upgrade chart in Kubernetes cluster
+install:
+	helm upgrade --install gofipe . \
+		--namespace gofipe \
+		--create-namespace
+
+# Uninstall chart from Kubernetes cluster
+uninstall:
+	helm uninstall gofipe \
+		--namespace gofipe
+
+# Dry run install to see manifests
+dry-run:
+	helm install gofipe . \
+		--namespace gofipe \
+		--create-namespace \
+		--dry-run \
+		--debug
+
+# Template chart to see rendered manifests
+template:
+	helm template gofipe . \
+		--namespace gofipe

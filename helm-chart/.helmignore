@@ -12,12 +12,34 @@
 .svn/
 # Common backup files
 *.swp
+*.swo
+*~
 *.bak
 *.tmp
 *.orig
 *~
 # Various IDEs
-.project
+*.iml
 .idea/
-*.tmproj
+*.sublime-project
+*.sublime-workspace
 .vscode/
+*.swp
+*.iml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+# JetBrains IDEs
+.idea/
+*.iml
+# VS Code
+.vscode/
+# Emacs
+*~
+\#*\#
+.\#*
+# Vim
+.*.swp

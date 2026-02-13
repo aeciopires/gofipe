@@ -3,10 +3,33 @@
 <!-- TOC -->
 
 - [Changelog](#changelog)
+- [v3.0.0](#v300)
 - [v2.0.0](#v200)
 - [v1.0.0](#v100)
 
 <!-- TOC -->
+
+# v3.0.0
+
+Date: 02/13/2026
+
+- Fixed bug related to default port of container in dockerfile
+- Bump Alpine image from 3.23.2 to 3.23.2
+- Fixed bug in helm chart
+- Change version in docker-compose file
+- Changed helm values
+- Updated `CHANGELOG.md` to document new features.
+- Updated `README.md` to remove instructions about change port of application.
+
+Trivy Report Summary
+
+┌─────────────────────────────────────────┬──────────┬─────────────────┬─────────┐
+│                 Target                  │   Type   │ Vulnerabilities │ Secrets │
+├─────────────────────────────────────────┼──────────┼─────────────────┼─────────┤
+│ aeciopires/gofipe:3.0.0 (alpine 3.23.3) │  alpine  │        0        │    -    │
+├─────────────────────────────────────────┼──────────┼─────────────────┼─────────┤
+│ app/gofipe                              │ gobinary │        0        │    -    │
+└─────────────────────────────────────────┴──────────┴─────────────────┴─────────┘
 
 # v2.0.0
 

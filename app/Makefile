@@ -5,7 +5,7 @@
 #---------------------------
 
 # Change the value according to new releases
-VERSION=2.0.0
+VERSION=3.0.0
 
 PATH_DOCKERFILE="./Dockerfile"
 

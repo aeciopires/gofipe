@@ -159,7 +159,7 @@ Install Docker: https://docs.docker.com/get-started/get-docker/
 Run the container
 
 ```bash
-docker run -d -p 8080:8080 --rm --name gofipe aeciopires/gofipe:2.0.0
+docker run -d -p 8080:8080 --rm --name gofipe aeciopires/gofipe:3.0.0
 ```
 
 Access the application:
@@ -168,14 +168,6 @@ Access the application:
 - Health: Open http://localhost:8080/health.
 
 ![gofipe.png](app/images/gofipe.png)
-
-You can change the default port using an environment variable.
-
-```bash
-docker run -p 3000:3000 -e PORT=3000 --rm --name gofipe aeciopires/gofipe:2.0.0
-```
-
-Access the application at http://localhost:3000.
 
 # Running locally without Docker
 
@@ -212,4 +204,4 @@ https://linktr.ee/aeciopires
 
 # License
 
-GPL-3.0 2025 Aécio dos Santos Pires
+GPL-3.0 2026 Aécio dos Santos Pires
