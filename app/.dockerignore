@@ -1,0 +1,11 @@
+bin/
+images/
+dashboard/
+*_test.go
+*.md
+Makefile
+docker-compose.yaml
+prometheus.yml
+.golangci.yml
+.dockerignore
+Dockerfile

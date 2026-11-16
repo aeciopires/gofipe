@@ -1,0 +1,23 @@
+# golangci-lint v2 configuration. Run with: make lint
+version: "2"
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose     # HTTP response bodies are closed
+    - errorlint     # errors are compared/wrapped with errors.Is/As
+    - gosec         # security issues
+    - misspell
+    - noctx         # HTTP requests carry a context
+    - revive        # style
+    - unconvert
+    - usestdlibvars # use http.MethodGet, http.StatusOK, ...
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+
+formatters:
+  enable:
+    - gofmt

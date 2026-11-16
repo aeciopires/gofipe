@@ -51,17 +51,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
-*/}}
-{{- define "gofipe.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "gofipe.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
-
-{{/*
 Render a piece of yaml that defines manifests
 Usage:
 {{ include "gofipe.tools.render" ( dict "value" .Values.path.to.value "context" $ ) }}

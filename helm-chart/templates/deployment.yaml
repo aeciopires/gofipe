@@ -14,7 +14,7 @@ spec:
 {{- with .Values.updateStrategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
-{{- end }} 
+{{- end }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -24,6 +24,8 @@ spec:
       labels:
         {{- include "gofipe.selectorLabels" . | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -38,12 +40,19 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.containerPort }}
               protocol: TCP
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbe.path }}
+              port: http
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.path }}
@@ -66,10 +75,16 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.env }}
           env:
-            {{- toYaml . | nindent 10 }}
-          {{- end }}
+            - name: PORT
+              value: {{ .Values.containerPort | quote }}
+            - name: SHUTDOWN_DELAY
+              value: {{ .Values.shutdownDelay | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ include "gofipe.name" . | quote }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

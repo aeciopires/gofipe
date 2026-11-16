@@ -1,0 +1,25 @@
+# Tool versions for the gofipe repository, managed by mise (https://mise.jdx.dev).
+#
+# Install everything with:   make install-deps   (or: mise trust && mise install)
+# Check everything with:     make check-deps
+#
+# Docker and Docker Compose are NOT managed here: install them separately
+# (see REQUIREMENTS.md).
+#
+# Supported platforms: Ubuntu 22.04 / 24.04 / 26.04 (amd64) and macOS (amd64, arm64).
+
+[tools]
+# Go toolchain used to build and test app/
+go = "1.27.4"
+# Go linters / security scanners
+golangci-lint = "2.15.0"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
+# Kubernetes / Helm (Helm 4 is required; Helm 3 is no longer supported)
+helm = "4.3.2"
+helm-docs = "1.14.2"
+kubectl = "1.37.2"
+# Container image tooling
+trivy = "0.76.2"
+hadolint = "2.15.1"
+# Shell script linting
+shellcheck = "0.11.0"

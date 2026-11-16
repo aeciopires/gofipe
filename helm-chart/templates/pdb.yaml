@@ -6,12 +6,12 @@ metadata:
   labels:
     {{- include "gofipe.labels" . | nindent 4 }}
 spec:
-  {{- if and (not .Values.autoscaling.enabled) (gt (.Values.replicaCount | int) 1) }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
   maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
-  {{- else if and (.Values.autoscaling.enabled) (gt (.Values.autoscaling.minReplicas | int) 1) }}
-  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "go-fipe.selectorLabels" . | nindent 6 }}
+      {{- include "gofipe.selectorLabels" . | nindent 6 }}
 {{- end }}

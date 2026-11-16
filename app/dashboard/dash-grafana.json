@@ -1,44 +1,405 @@
 {
-  "annotations": { "list": [] },
+  "uid": "gofipe-business",
+  "title": "gofipe - Business",
+  "description": "What users search for: brands, models, fuel and prices",
+  "tags": [
+    "gofipe"
+  ],
   "editable": true,
-  "panels": [
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "timezone": "browser",
+  "links": [
     {
-      "title": "Total Search Requests",
-      "type": "stat",
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
-      "targets": [ { "expr": "sum(fipe_http_requests_total)", "refId": "A" } ]
-    },
-    {
-      "title": "Most Searched Brands",
-      "type": "piechart",
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
-      "targets": [ { "expr": "sum by (brand_name) (fipe_brand_search_count)", "refId": "A" } ]
-    },
-    {
-      "title": "Fuel Type Distribution",
-      "type": "piechart",
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
-      "targets": [ { "expr": "sum by (fuel) (fipe_fuel_count)", "refId": "A" } ]
-    },
-    {
-      "title": "Observed Min Price (latest by brand/model)",
-      "type": "timeseries",
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
-      "targets": [ { "expr": "max by (brand_name, model_name) (fipe_price_min)", "refId": "A" } ]
-    },
-    {
-      "title": "Observed Max Price (latest by brand/model)",
-      "type": "timeseries",
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
-      "targets": [ { "expr": "max by (brand_name, model_name) (fipe_price_max)", "refId": "A" } ]
-    },
-    {
-      "title": "Top 10 Searched Models",
-      "type": "table",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
-      "targets": [ { "expr": "topk(10, sum by (model_name, brand_name) (fipe_search_stats))", "refId": "A" } ]
+      "title": "gofipe dashboards",
+      "type": "dashboards",
+      "tags": [
+        "gofipe"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true
     }
   ],
-  "schemaVersion": 36,
-  "title": "FIPE Business Overview"
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Price searches",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Successful /api/price lookups",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "sum(fipe_search_stats)",
+          "legendFormat": "",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 2,
+      "title": "API requests (all routes)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "sum(fipe_http_requests_total{path=~\"/api/.*\"})",
+          "legendFormat": "",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "title": "Most searched brands",
+      "type": "piechart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "sum by (brand_name) (fipe_brand_search_count)",
+          "legendFormat": "{{brand_name}}",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Fuel type distribution",
+      "type": "piechart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "sum by (fuel) (fipe_fuel_count)",
+          "legendFormat": "{{fuel}}",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Searches per minute",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(fipe_search_stats[$__rate_interval])) * 60",
+          "legendFormat": "searches/min",
+          "exemplar": false,
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Top 10 searched models",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (brand_name, model_name) (fipe_search_stats))",
+          "legendFormat": "",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "brand_name": "Brand",
+              "model_name": "Model",
+              "Value": "Searches"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Searches",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Observed price range per vehicle (min / max)",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Lowest and highest FIPE price seen for each vehicle since the app started",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "max by (brand_name, model_name, year_id) (fipe_price_min)",
+          "legendFormat": "",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        },
+        {
+          "expr": "max by (brand_name, model_name, year_id) (fipe_price_max)",
+          "legendFormat": "",
+          "exemplar": false,
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL"
+        },
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "brand_name": "Brand",
+              "model_name": "Model",
+              "year_id": "Year",
+              "Value #A": "Min price",
+              "Value #B": "Max price"
+            }
+          }
+        }
+      ]
+    }
+  ]
 }

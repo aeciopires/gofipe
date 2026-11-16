@@ -19,29 +19,52 @@ image:
   # -- Pull policy of Docker image
   pullPolicy: IfNotPresent
   # -- Docker image tag
-  tag: "3.0.0"
+  tag: "4.1.0"
 
 # -- List of dockerconfig secrets names to use when pulling images
 imagePullSecrets: []
 
+# -- Override the chart name
 nameOverride: ""
+# -- Override the full name of the resources
 fullnameOverride: ""
+
+# -- Port the container listens on (passed to the app through the PORT env var)
+containerPort: 8080
+
+# -- Extra environment variables for the container.
+# Examples: FIPE_API_TOKEN from a Secret (higher FIPE rate limits / longer price
+# history) and OpenTelemetry export of traces and logs to an OTLP/HTTP collector
+# (tracing is disabled while no OTEL_EXPORTER_OTLP_*ENDPOINT is set).
+env: []
+  # - name: FIPE_API_TOKEN
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: gofipe-fipe-token
+  #       key: token
+  # - name: OTEL_EXPORTER_OTLP_ENDPOINT
+  #   value: http://otel-collector.observability.svc:4318
+  # - name: OTEL_RESOURCE_ATTRIBUTES
+  #   value: deployment.environment.name=production
 
 # -- Pod annotations configurations
 podAnnotations: {}
 
 # -- Pod security configurations
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
 
-# -- Security context configurations
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+# -- Container security configurations (the image runs as the non-root UID 10001)
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
 
 service:
   # -- Type of service in Kubernetes cluster
@@ -52,6 +75,10 @@ service:
   createGcpBackendAndFrontendConfig: false
   # -- Annotations of service
   annotations: {}
+  # -- Fixed node port (only used when type is NodePort). Empty = chosen by Kubernetes
+  nodePort: ""
+  # -- Load balancer IP (only used when type is LoadBalancer and supported by the cloud provider)
+  loadBalancerIP: ""
 
 # Ingress configurations
 ingress:
@@ -63,10 +90,12 @@ ingress:
   createCertManagerIssuer: false
   # -- Email for Cert Manager Issue
   certManagerIssueEmail: "CHANGE_HERE"
+  # -- IngressClass name (e.g. nginx, alb, gce)
   className: ""
   # -- Ingress annotations
   annotations:
     #--- Annotations to create loadbalancer in AWS of the type application for external access of the VPC
+    #--- Prefer ingress.className over the deprecated kubernetes.io/ingress.class annotation
     #kubernetes.io/ingress.class: alb
     #alb.ingress.kubernetes.io/scheme: internet-facing
     #alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
@@ -120,39 +149,59 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-# -- Health check on creation pod
-readinessProbe:
-  # -- Path of health check of application
-  path: /health
-  # -- Number of seconds after the container has started before readiness
-  initialDelaySeconds: 5
-  # -- Specifies that the kubelet should perform a liveness probe every N seconds
-  periodSeconds: 30
+# -- Startup probe: gives the container time to start before liveness/readiness checks begin.
+# Uses the liveness endpoint. Total startup budget = periodSeconds * failureThreshold.
+startupProbe:
+  # -- Path of the startup check (liveness endpoint)
+  path: /health/live
+  # -- Seconds between startup checks
+  periodSeconds: 2
   # -- Number of seconds after which the probe times out
-  timeoutSeconds: 5
+  timeoutSeconds: 2
+  # -- Failed checks before Kubernetes restarts the container (2s * 15 = 30s)
+  failureThreshold: 15
+
+# -- Readiness probe: while it fails the pod receives no traffic from the Service.
+# /health/ready returns 503 while gofipe starts and after it receives SIGTERM
+# (see shutdownDelay), so rolling updates do not drop requests.
+readinessProbe:
+  # -- Path of the readiness check
+  path: /health/ready
+  # -- Number of seconds after the container has started before readiness
+  initialDelaySeconds: 0
+  # -- How often (in seconds) to perform the probe
+  periodSeconds: 5
+  # -- Number of seconds after which the probe times out
+  timeoutSeconds: 2
   # -- Minimum consecutive successes for the probe to be considered successful after having failed
   successThreshold: 1
-  # -- When a probe fails, Kubernetes will try failureThreshold times before giving up.
-  # Giving up in case of liveness probe means restarting the container.
-  # In case of readiness probe the Pod will be marked Unready
+  # -- Failed checks before the pod is marked Unready
+  failureThreshold: 2
+
+# -- Liveness probe: Kubernetes restarts the container when it fails.
+# /health/live only checks that the process answers HTTP (it does not call FIPE,
+# so a FIPE outage never restarts the pods).
+livenessProbe:
+  # -- Path of the liveness check
+  path: /health/live
+  # -- Number of seconds after the container has started before liveness
+  initialDelaySeconds: 0
+  # -- How often (in seconds) to perform the probe
+  periodSeconds: 15
+  # -- Number of seconds after which the probe times out
+  timeoutSeconds: 3
+  # -- Minimum consecutive successes for the probe to be considered successful after having failed
+  successThreshold: 1
+  # -- Failed checks before the container is restarted
   failureThreshold: 3
 
-# -- Healh check continuos
-livenessProbe:
-  # -- Path of health check of application
-  path: /health
-  # -- Number of seconds after the container has started before liveness
-  initialDelaySeconds: 5
-  # -- Specifies that the kubelet should perform a liveness probe every N seconds
-  periodSeconds: 30
-  # -- Number of seconds after which the probe times out
-  timeoutSeconds: 5
-  # -- Minimum consecutive successes for the probe to be considered successful after having failed
-  successThreshold: 1
-  # -- When a probe fails, Kubernetes will try failureThreshold times before giving up.
-  # Giving up in case of liveness probe means restarting the container.
-  # In case of readiness probe the Pod will be marked Unready
-  failureThreshold: 3
+# -- Time gofipe keeps serving after SIGTERM while /health/ready returns 503
+# (SHUTDOWN_DELAY), so endpoints are removed before the server stops. Must be
+# smaller than terminationGracePeriodSeconds minus ~15s of HTTP shutdown.
+shutdownDelay: 5s
+
+# -- Seconds Kubernetes waits after SIGTERM before killing the container
+terminationGracePeriodSeconds: 30
 
 # -- Node selector configurations
 nodeSelector: {}
@@ -171,9 +220,10 @@ affinity: {}
 #      - gofipe
 #      topologyKey: kubernetes.io/hostname
 
-# -- Service monitor configurations
+# -- Service monitor configurations (requires the Prometheus Operator CRDs)
 serviceMonitor:
   enabled: false
+  honorLabels: false
   additionalLabels: {}
   path: "/metrics"
   interval: "30s"
@@ -187,5 +237,7 @@ extraManifests: []
 # -- Pod Disruption Budget configuration
 podDisruptionBudget:
   enabled: false
-  # -- Minimum available pods
+  # -- Minimum available pods (ignored when maxUnavailable is set)
   minAvailable: 25%
+  # -- Maximum unavailable pods. Takes precedence over minAvailable when set
+  maxUnavailable: ""

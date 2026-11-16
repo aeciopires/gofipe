@@ -1,0 +1,83 @@
+# Grafana data sources, provisioned at startup. Fixed UIDs are referenced by
+# the dashboards in app/dashboard/ and by the correlations below:
+#   metrics -> traces : Prometheus exemplars (trace_id) open the trace in Tempo
+#   logs    -> traces : the trace_id field of the JSON log line opens the trace in Tempo
+#   traces  -> logs   : Tempo spans open the matching Loki logs
+#   traces  -> metrics: Tempo spans open RED metrics in Prometheus
+# "$$" escapes "$" in provisioning files.
+#
+# Jaeger is not a Grafana data source here: Grafana's Jaeger plugin uses the
+# legacy /api/* HTTP API, which Jaeger 2.21+ no longer serves (only /api/v3).
+# The same traces are in Tempo (inside Grafana) and in the Jaeger UI.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+          urlDisplayLabel: View trace in Tempo
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      # gofipe logs are JSON lines; trace_id is read from the line itself, so the
+      # link works for OTLP logs and for stdout collected by any log shipper.
+      derivedFields:
+        - name: TraceID
+          matcherType: regex
+          matcherRegex: '"trace_id":"(\w+)"'
+          datasourceUid: tempo
+          url: "$${__value.raw}"
+          urlDisplayLabel: View trace in Tempo
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      streamingEnabled:
+        search: true
+        metrics: true
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: -10m
+        spanEndTimeShift: 10m
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        customQuery: true
+        query: '{service_name="$${__span.tags["service.name"]}"} |= "$${__trace.traceId}" | json'
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        tags:
+          - key: service.name
+            value: service
+        queries:
+          - name: Request rate
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))'
+          - name: Error rate
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags, status_code="STATUS_CODE_ERROR"}[5m]))'
+          - name: p95 latency
+            query: 'histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])))'

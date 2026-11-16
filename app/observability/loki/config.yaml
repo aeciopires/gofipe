@@ -1,0 +1,40 @@
+# Grafana Loki in single-binary mode with local filesystem storage (development only).
+# gofipe logs arrive through the OpenTelemetry Collector on the native OTLP
+# endpoint (/otlp); trace_id and span_id are stored as structured metadata.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  allow_structured_metadata: true
+  volume_enabled: true # used by Grafana Logs Drilldown
+
+pattern_ingester:
+  enabled: true # used by Grafana Logs Drilldown
+
+analytics:
+  reporting_enabled: false

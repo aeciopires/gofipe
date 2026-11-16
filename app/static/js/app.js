@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Local cache to avoid repeated selects during session
   const localCache = { brands: {}, models: {}, years: {} };
 
+  // Builds "/api/<endpoint>?a=1&b=2" with every value URL-encoded.
+  const apiURL = (endpoint, params) => `/api/${endpoint}?${new URLSearchParams(params)}`;
+
   async function fetchJSON(url){
     const res = await fetch(url, {cache: 'no-cache'});
     if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -38,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       populateSelect(brandSel, localCache.brands[type]);
       return;
     }
-    const data = await fetchJSON(`/api/brands?type=${type}`);
+    const data = await fetchJSON(apiURL('brands', {type}));
     localCache.brands[type]=data;
     populateSelect(brandSel, data);
   }
@@ -48,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const type=typeSel.value; const brandId=brandSel.value; if(!brandId) return;
     const key = `${type}:${brandId}`;
     if(localCache.models[key]){ populateSelect(modelSel, localCache.models[key]); return }
-    const data = await fetchJSON(`/api/models?type=${type}&brandId=${brandId}`);
+    const data = await fetchJSON(apiURL('models', {type, brandId}));
     localCache.models[key]=data;
     populateSelect(modelSel, data);
   }
@@ -58,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const type=typeSel.value; const brandId=brandSel.value; const modelId=modelSel.value; if(!modelId) return;
     const key=`${type}:${brandId}:${modelId}`;
     if(localCache.years[key]){ populateSelect(yearSel, localCache.years[key]); return }
-    const data = await fetchJSON(`/api/years?type=${type}&brandId=${brandId}&modelId=${modelId}`);
+    const data = await fetchJSON(apiURL('years', {type, brandId, modelId}));
     localCache.years[key]=data;
     populateSelect(yearSel, data);
   }
@@ -74,15 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const brandName = brandSel.options[brandSel.selectedIndex].text;
     const modelName = modelSel.options[modelSel.selectedIndex].text;
     try{
-      const data = await fetchJSON(`/api/price?type=${type}&brandId=${brandId}&modelId=${modelId}&yearId=${yearId}&brandName=${encodeURIComponent(brandName)}&modelName=${encodeURIComponent(modelName)}`);
+      const data = await fetchJSON(apiURL('price', {type, brandId, modelId, yearId}));
       setText(resPrice, data.price || 'N/A');
       setText(resDesc, `${data.brand || brandName} - ${data.model || modelName}`);
       setText(resRef, `Ref: ${data.referenceMonth || ''}`);
-      setText(fuelCode, data.acronymFuel ? `Fuel code: ${data.acronymFuel}` : (data.fuel ? `Fuel: ${data.fuel}` : ''));
+      setText(fuelCode, data.fuel ? `Fuel: ${data.fuel}${data.fuelAcronym ? ` (${data.fuelAcronym})` : ''}` : '');
       // always update FIPE code from the price response when available
-      if (data.codeFipe || data.code_fipe) {
-        setText(codeFipeEl, `FIPE code: ${data.codeFipe || data.code_fipe}`);
-      }
+      setText(codeFipeEl, data.codeFipe ? `FIPE code: ${data.codeFipe}` : '');
+      // a new vehicle was selected: drop the chart of the previous one
+      if(chart){ chart.destroy(); chart = null; }
       resultBox.classList.remove('d-none');
     }catch(err){
       alert('Failed to load price: '+err.message);
@@ -91,9 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadHistory(){
     const type=typeSel.value, brandId=brandSel.value, modelId=modelSel.value, yearId=yearSel.value; if(!yearId) return;
-    const months = historyMonths.value||12;
+    const months = historyMonths.value || 12;
     try{
-      const data = await fetchJSON(`/api/priceHistory?type=${type}&brandId=${brandId}&modelId=${modelId}&yearId=${yearId}&months=${months}`);
+      const data = await fetchJSON(apiURL('priceHistory', {type, brandId, modelId, yearId, months}));
       const history = data.history || data; // accommodate single-point fallback
       // Build entries with parsed date so we can sort chronologically (oldest -> newest)
       const entries = (history || []).map((item, idx) => {
@@ -137,9 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Events
-  typeSel.addEventListener('change', ()=>{ resetSelects(brandSel, modelSel, yearSel); loadBrands() });
-  brandSel.addEventListener('change', loadModels);
-  modelSel.addEventListener('change', loadYears);
+  // Surface network/API errors instead of leaving unhandled promise rejections.
+  const withErrors = (fn, what) => () => fn().catch(err => alert(`Failed to load ${what}: ${err.message}`));
+  typeSel.addEventListener('change', ()=>{ resetSelects(brandSel, modelSel, yearSel); withErrors(loadBrands, 'brands')() });
+  brandSel.addEventListener('change', withErrors(loadModels, 'models'));
+  modelSel.addEventListener('change', withErrors(loadYears, 'years'));
   yearSel.addEventListener('change', loadPrice);
   btnLoadHistory.addEventListener('click', loadHistory);
 

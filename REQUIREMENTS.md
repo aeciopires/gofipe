@@ -1,154 +1,149 @@
-<!-- TOC -->
-
-- [General Packages](#general-packages)
-- [asdf](#asdf)
-- [Docker](#docker)
-- [Install Go](#install-go)
-- [Helm](#helm)
-- [Helm Docs](#helm-docs)
-- [Install Kubectl](#install-kubectl)
+# Requirements
 
 <!-- TOC -->
 
-# General Packages
+- [Requirements](#requirements)
+- [Supported platforms](#supported-platforms)
+- [Quick start](#quick-start)
+- [What gets installed](#what-gets-installed)
+- [Docker and Docker Compose (installed separately)](#docker-and-docker-compose-installed-separately)
+  - [Ubuntu](#ubuntu)
+  - [macOS](#macos)
+- [mise](#mise)
+  - [Activating mise in your shell](#activating-mise-in-your-shell)
+  - [Updating tool versions](#updating-tool-versions)
+- [Manual installation (without make)](#manual-installation-without-make)
+- [Troubleshooting](#troubleshooting)
 
-Install the follow packages.
+<!-- TOC -->
 
-Debian/Ubuntu:
+This repository uses [mise](https://mise.jdx.dev) to install and pin the versions of every development tool. The versions live in a single file: [mise.toml](mise.toml).
 
-```bash
-sudo apt-get install -y vim git make curl net-tools acl pkg-config
-```
+# Supported platforms
 
-# asdf
+| Operating system | Architecture |
+|------------------|--------------|
+| Ubuntu 22.04 LTS | amd64 (x86_64) |
+| Ubuntu 24.04 LTS | amd64 (x86_64) |
+| Ubuntu 26.04 LTS | amd64 (x86_64) |
+| macOS            | amd64 (Intel) and arm64 (Apple Silicon) |
 
-> Attention!!!
-> To update ``asdf``, ONLY use the following command. If you try to reinstall or update by changing the version in the following commands, it will be necessary to reinstall all plugins/commands installed before, so it is very important to back up the ``$HOME/.asdf`` directory.
+Other systems may work, but they are not tested. To try anyway, export `SKIP_PLATFORM_CHECK=1` before running the commands below.
 
-```bash
-asdf update
-```
+# Quick start
 
-Run the following commands:
-
-```bash
-ASDF_VERSION="v0.15.0"
-git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch $ASDF_VERSION
-
-# Adicionando no $HOME/.bashrc
-echo ". \"\$HOME/.asdf/asdf.sh\"" >> ~/.bashrc
-echo ". \"\$HOME/.asdf/completions/asdf.bash\"" >> ~/.bashrc
-source ~/.bashrc
-```
-
-Reference: https://asdf-vm.com/guide/introduction.html
-
-# Docker
-
-Install Docker following commands.
+From the root of the repository:
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh;
-sudo sh get-docker.sh;
-# Using docker without sudo
-sudo usermod -aG docker $USER;
-sudo setfacl -m user:$USER:rw /var/run/docker.sock
+# 1. Install Docker + Docker Compose (see the next sections) - not done by make
+# 2. Install everything else (OS packages, mise and the pinned tools)
+make install-deps
+
+# 3. Verify that everything is installed (exits with an error if something is missing)
+make check-deps
 ```
 
-Reference: https://docs.docker.com/engine/install/linux-postinstall/#configure-docker-to-start-on-boot
+Both targets are also available inside `app/` and `helm-chart/` (they delegate to the root `Makefile`, which calls [scripts/deps.sh](scripts/deps.sh)).
 
-For more information about Docker Compose visit:
+`make install-deps` does the following:
 
-- https://docs.docker.com
-- http://blog.aeciopires.com/primeiros-passos-com-docker
+1. Checks that the OS and architecture are supported.
+2. **Ubuntu:** installs `ca-certificates curl git make tar gzip unzip` with `apt-get` (uses `sudo` when you are not root).
+   **macOS:** checks the Xcode Command Line Tools (they provide `git` and `make`) and starts their installer if missing.
+3. Installs `mise` into `~/.local/bin` using the official installer (`curl https://mise.run | sh`), if it is not installed yet.
+4. Runs `mise trust` and `mise install` to install the tools pinned in [mise.toml](mise.toml).
+5. Runs `make check-deps`.
 
-# Install Go
+# What gets installed
 
-Run the following commands to install Go.
+| Tool | Version | Used for |
+|------|---------|----------|
+| [Go](https://go.dev) | 1.27.4 | Building and testing `app/` |
+| [golangci-lint](https://golangci-lint.run) | 2.15.0 | `make -C app lint` |
+| [govulncheck](https://go.dev/doc/tutorial/govulncheck) | 1.9.0 | `make -C app vuln` |
+| [Helm](https://helm.sh) | **4.3.2** | Deploying `helm-chart/` (**Helm 3 is no longer supported**) |
+| [helm-docs](https://github.com/norwoodj/helm-docs) | 1.14.2 | `make -C helm-chart gen-docs` |
+| [kubectl](https://kubernetes.io/docs/reference/kubectl/) | 1.37.2 | Talking to Kubernetes clusters |
+| [Trivy](https://trivy.dev) | 0.76.2 | Scanning the Docker image (`make -C app scan`) |
+| [hadolint](https://github.com/hadolint/hadolint) | 2.15.1 | Linting the `Dockerfile` |
+| [ShellCheck](https://www.shellcheck.net) | 0.11.0 | Linting `scripts/*.sh` |
+
+Docker images used by the project (pinned in `app/Dockerfile` and `app/docker-compose.yaml`): `golang:1.27.4-alpine`, `alpine:3.24.4`, `prom/prometheus:v3.16.0`, `grafana/grafana:13.3.1`, `grafana/loki:3.7.10`, `grafana/tempo:3.1.1`, `jaegertracing/jaeger:2.23.0`, `otel/opentelemetry-collector-contrib:0.165.0`.
+
+# Docker and Docker Compose (installed separately)
+
+Docker is **not** installed by `make install-deps` because it needs system-level configuration (daemon, groups, Docker Desktop license on macOS). `make check-deps` only checks it.
+
+## Ubuntu
 
 ```bash
-VERSION=1.25.5
-
-mkdir -p $HOME/go/bin
-
-cd /tmp
-curl -L https://go.dev/dl/go$VERSION.linux-amd64.tar.gz -o go.tar.gz
-
-sudo rm -rf /usr/local/go 
-sudo tar -C /usr/local -xzf go.tar.gz
-rm /tmp/go.tar.gz
-
-export GOPATH=$HOME/go
-export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-
-go version
-
-echo "GOPATH=$HOME/go" >> ~/.bashrc
-echo "PATH=\$PATH:/usr/local/go/bin:\$GOPATH/bin" >> ~/.bashrc
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh   # installs Docker Engine, Buildx and the Compose plugin
+# Use docker without sudo (log out and in again afterwards)
+sudo usermod -aG docker "$USER"
 ```
 
-More informations: https://go.dev/doc/
+Reference: https://docs.docker.com/engine/install/ubuntu/ and https://docs.docker.com/engine/install/linux-postinstall/
 
-# Helm
+## macOS
 
-Execute these commands to install helm.
+Install [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/) (choose the Apple Silicon or Intel build), or an alternative such as [Colima](https://github.com/abiosoft/colima) or [OrbStack](https://orbstack.dev). Docker Desktop already includes Compose and Buildx.
+
+# mise
+
+[mise](https://mise.jdx.dev) is a polyglot version manager (a faster replacement for `asdf`). When you are inside this repository, mise reads [mise.toml](mise.toml) and puts the right version of each tool on your `PATH`.
+
+> This project **replaced asdf with mise**. If you used the old instructions, you can remove the asdf plugins for go/helm/helm-docs/kubectl; mise does not need them.
+
+## Activating mise in your shell
+
+The Makefiles call the tools through `mise exec --`, so they work even without activation. To use `go`, `helm`, etc. directly in your terminal, add one line to your shell configuration and open a new terminal:
 
 ```bash
-VERSION="3.19.0"
+# bash (Ubuntu default)
+echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
 
-asdf plugin list all | grep helm
-asdf plugin add helm https://github.com/Antiarchitect/asdf-helm.git
-asdf latest helm
-
-asdf install helm $VERSION
-asdf list helm
-
-asdf global helm $VERSION
-asdf list helm
+# zsh (macOS default)
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
 ```
 
-Reference: https://helm.sh/docs/intro/install/
-
-# Helm Docs
-
-Install helm-docs:
+Check it:
 
 ```bash
-VERSION="1.14.2"
-
-asdf plugin list all | grep helm-docs
-asdf plugin add helm-docs https://github.com/sudermanjr/asdf-helm-docs.git
-asdf latest helm-docs
-
-asdf install helm-docs $VERSION
-asdf list helm-docs
-
-asdf global helm-docs $VERSION
-asdf list helm-docs
+cd gofipe
+mise ls --current   # lists the tools and versions of this repository
+go version          # go1.27.4
+helm version        # v4.3.2
 ```
 
-Documentation: https://github.com/norwoodj/helm-docs 
+## Updating tool versions
 
-The documentation generated by ``helm-docs`` is based on the contents of the ``values.yaml``, ``README.md.gotmpl`` and ``Chart.yaml`` file. It tries to overwrite the contents of the ``README.md`` file within the chart directory.
+1. Find the latest version: `mise latest helm` (or `mise ls-remote helm`).
+2. Edit [mise.toml](mise.toml).
+3. Run `mise install` (or `make install-deps`).
+4. If you changed Go, also update the `go` directive in `app/go.mod` and the `golang:` image in `app/Dockerfile`.
+5. Update the tables in this file.
 
-# Install Kubectl
-
-Simple shell function for Kubectl installation in Linux 64 bits. Copy and paste this code:
+# Manual installation (without make)
 
 ```bash
-VERSION_OPTION_1="1.34.3"
+# Ubuntu only
+sudo apt-get update && sudo apt-get install -y ca-certificates curl git make tar gzip unzip
 
-asdf plugin list all | grep kubectl
-asdf plugin add kubectl https://github.com/asdf-community/asdf-kubectl.git
-asdf latest kubectl
-
-asdf install kubectl $VERSION_OPTION_1
-asdf list kubectl
-
-asdf global kubectl $VERSION_OPTION_1
-asdf list kubectl
+# Ubuntu and macOS
+curl -fsSL https://mise.run | sh
+export PATH="$HOME/.local/bin:$PATH"
+cd gofipe
+mise trust
+mise install
 ```
 
-Kubectl documentation:
+# Troubleshooting
 
-https://kubernetes.io/docs/reference/kubectl/overview/
+| Problem | Solution |
+|---------|----------|
+| `mise ERROR Config files in .../mise.toml are not trusted` | Run `mise trust` in the repository root. |
+| `Helm 4 is required, found 'v3.x'` | A global Helm 3 is shadowing the pinned one. Run `mise install helm` and make sure mise is activated, or call `mise exec -- helm ...`. |
+| `Unsupported Ubuntu version` | Only 22.04, 24.04 and 26.04 are supported. Use `SKIP_PLATFORM_CHECK=1 make install-deps` at your own risk. |
+| `Docker daemon is not reachable` | Start Docker (Docker Desktop on macOS, `sudo systemctl start docker` on Ubuntu) and check that your user is in the `docker` group. |
+| Rate limit / `429 Too Many Requests` from the FIPE API | Create a token at https://fipe.online and run the app with `FIPE_API_TOKEN=<token>`. |

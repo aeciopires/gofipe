@@ -5,7 +5,23 @@
 
 # Prerequisites
 
-- Install the kubectl, helm and helm-docs commands following the instructions of the file [REQUIREMENTS.md](../REQUIREMENTS.md).
+- **Helm 4** (Helm 3 is no longer supported), `kubectl` and `helm-docs`. They are pinned in [mise.toml](../mise.toml) and installed with `make install-deps` (see [REQUIREMENTS.md](../REQUIREMENTS.md)).
+- Kubernetes {{ template "chart.kubeVersion" . }}.
+
+# Makefile shortcuts
+
+Run `make help` inside `helm-chart/` to list every target. The most used ones:
+
+| Target | What it does |
+|--------|--------------|
+| `make lint` | `helm lint --strict .` |
+| `make template` | Renders the manifests locally |
+| `make dry-run` | Server-side dry-run against the current cluster |
+| `make install` | `helm upgrade --install` (waits for the pods) |
+| `make uninstall` | Removes the release |
+| `make gen-docs` | Regenerates this README from `values.yaml` |
+
+Use `RELEASE=<name>` and `NAMESPACE=<ns>` to change the defaults (`gofipe`/`gofipe`).
 
 # Installing the Chart
 
@@ -16,7 +32,7 @@
 - Test the installation with command:
 
 ```bash
-helm upgrade --install {{ template "chart.name" . }} -f {{ template "chart.name" . }}/values.yaml {{ template "chart.name" . }}/ -n {{ template "chart.name" . }} --create-namespace --dry-run
+helm upgrade --install {{ template "chart.name" . }} -f {{ template "chart.name" . }}/values.yaml {{ template "chart.name" . }}/ -n {{ template "chart.name" . }} --create-namespace --dry-run=server
 ```
 
 - To install/upgrade the chart with the release name `{{ template "chart.name" . }}`:

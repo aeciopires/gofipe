@@ -9,7 +9,7 @@
 
 > Configure authentication on your account to use the SSH protocol instead of HTTP. See this [tutorial](https://confluence.atlassian.com/bitbucketserver/ssh-access-keys-for-system-use-776639781.html)
 
-- Install the [requirements](REQUIREMENTS.md).
+- Install the [requirements](REQUIREMENTS.md) (Docker separately, then `make install-deps` and `make check-deps`).
 
 - Create a fork this repository.
 
@@ -39,8 +39,19 @@ git checkout -b BRANCH_NAME
 git branch
 ```
 
-- Make your changes and tests to the new branch. See the section [Build image](README.md#build-image).
-- Update the [app/Makefile](app/Makefile) file. See the section [Build image](README.md#build-image).
+- Make your changes and tests to the new branch. Before committing, run from the repository root:
+
+```bash
+make lint   # golangci-lint, hadolint, shellcheck, helm lint --strict
+make test   # go test -race and helm template
+make -C app vuln
+```
+
+- When releasing a new app version, update together (see [docs/08-development-workflow.md](docs/08-development-workflow.md#releasing-a-new-version)):
+  - `VERSION` in [app/Makefile](app/Makefile);
+  - the `version`/`date_create` labels in [app/Dockerfile](app/Dockerfile);
+  - the image tag and `VERSION` build arg in [app/docker-compose.yaml](app/docker-compose.yaml);
+  - `image.tag` in [helm-chart/values.yaml](helm-chart/values.yaml) and `appVersion` (plus `version` if the chart changed) in [helm-chart/Chart.yaml](helm-chart/Chart.yaml), then `make -C helm-chart gen-docs`.
 - Update the [app/CHANGELOG.md](app/CHANGELOG.md) file.
 - Commit the changes to the branch.
 - Push files to repository remote with command:

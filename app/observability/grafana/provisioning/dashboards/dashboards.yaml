@@ -1,0 +1,12 @@
+# Loads every dashboard JSON from app/dashboard/ (mounted at /var/lib/grafana/dashboards).
+apiVersion: 1
+
+providers:
+  - name: gofipe
+    folder: gofipe
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

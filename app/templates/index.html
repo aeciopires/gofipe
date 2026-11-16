@@ -4,9 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Go FIPE Search (v2)</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-yEPZ7jP9S0QKiUQ0m3jjsO4ProIW7wvR9gXkI7JOGa2XVsw53Yke2bsdkBbjmmiX" crossorigin="anonymous">
     <link rel="stylesheet" href="/static/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"
+            integrity="sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0" crossorigin="anonymous"></script>
     <script defer src="/static/js/app.js"></script>
 </head>
 <body>
@@ -18,13 +20,13 @@
                     <label class="theme-switch" title="Toggle theme">
                         <input id="themeToggle" type="checkbox">
                         <span class="switch"></span>
-                        <span class="icon icon-sun" aria-hidden>
+                        <span class="icon icon-sun" aria-hidden="true">
                             <!-- Sun SVG -->
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                 <path d="M6.76 4.84l-1.8-1.79L3.17 4.84l1.79 1.79 1.8-1.79zM1 13h3v-2H1v2zm10-9h2V1h-2v3zm7.03 1.05l1.79-1.79-1.79-1.79-1.79 1.79 1.79 1.79zM17 13h3v-2h-3v2zM6.76 19.16l-1.79 1.79 1.79 1.79 1.79-1.79-1.79-1.79zM12 18a6 6 0 100-12 6 6 0 000 12zM19.07 19.07l1.79 1.79 1.79-1.79-1.79-1.79-1.79 1.79z" fill="currentColor" />
                             </svg>
                         </span>
-                        <span class="icon icon-moon" aria-hidden>
+                        <span class="icon icon-moon" aria-hidden="true">
                             <!-- Moon SVG -->
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                 <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="currentColor" />
@@ -78,7 +80,7 @@
                     </div>
 
                     <div class="mt-4">
-                        <label class="form-label">Price history (months)</label>
+                        <label class="form-label" for="historyMonths">Price history (months)</label>
                         <div class="d-flex gap-2">
                             <select id="historyMonths" class="form-select w-auto">
                                 <option value="3">3</option>

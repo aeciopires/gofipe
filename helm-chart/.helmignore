@@ -43,3 +43,9 @@
 .\#*
 # Vim
 .*.swp
+
+# Build/dev files
+Makefile
+packages/
+README.md.gotmpl
+.helm/
